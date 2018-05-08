@@ -112,9 +112,9 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
    for i in range(numberVar):
      max_f[i] = 0.0 
      for k in range(length_data):
-       if ((f[k][i] > max_f[i])&&(f[k][i]>0)):
+       if ((f[k][i] > max_f[i])and(f[k][i]>0)):
           max_f[i] = f[k][i] 
-       if ((-f[k][i] > max_f[i])&&(f[k][i]<0)): 
+       if ((-f[k][i] > max_f[i])and(f[k][i]<0)): 
           max_f[i] = -f[k][i] 
  
    #normalization of time series
@@ -137,11 +137,11 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
           coarse_f[i][j][k]=0 
           n_f[j+i+1][k]=norm_f[j+i][k] 
         else:
-     if ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) > thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]>0)):
+     if ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) > thres*thres_var)and(norm_f[j+i+1][k]-norm_f[j+i][k]>0)):
           #  printf("%g\t%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres,thres) 
            coarse_f[i][j][k] = 1 
            n_f[j+i+1][k]=norm_f[j+i][k] 
-     else if: ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) >  thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]<0)):
+     else if: ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) >  thres*thres_var)and(norm_f[j+i+1][k]-norm_f[j+i][k]<0)):
         # printf("%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres) 
            coarse_f[i][j][k] = -1 
             n_f[j+i+1][k]=norm_f[j+i][k] 
@@ -184,31 +184,31 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
             if (n_und_f[i][0]==3):
                class_f[i][k]=1 
             
-            if ((n_und_f[i][0]==2)&&(n_und_f[i][1]==1)):
+            if ((n_und_f[i][0]==2)and(n_und_f[i][1]==1)):
                class_f[i][k]=1 
             
-            if ((n_und_f[i][0]==1)&&(n_und_f[i][1]==2)):
+            if ((n_und_f[i][0]==1)and(n_und_f[i][1]==2)):
                class_f[i][k]=2 
             
-            if ((n_und_f[i][0]==2)&&(n_und_f[i][2]==1)):
+            if ((n_und_f[i][0]==2)and(n_und_f[i][2]==1)):
                class_f[i][k]=2 
             
-            if ((n_und_f[i][2]==1)&&(n_und_f[i][1]==1)&&(n_und_f[i][0]==1)):
+            if ((n_und_f[i][2]==1)and(n_und_f[i][1]==1)and(n_und_f[i][0]==1)):
                class_f[i][k]=3 
             
             if (n_und_f[i][1]==3){
                class_f[i][k]=3 
             
-            if ((n_und_f[i][1]==2)&&(n_und_f[i][2]==1)):
+            if ((n_und_f[i][1]==2)and(n_und_f[i][2]==1)):
                class_f[i][k]=4 
             
-            if ((n_und_f[i][0]==1)&&(n_und_f[i][2]==2)):
+            if ((n_und_f[i][0]==1)and(n_und_f[i][2]==2)):
                class_f[i][k]=4 
             
             if (n_und_f[i][2]==3):
                class_f[i][k]=5 
             
-            if ((n_und_f[i][1]==1)&&(n_und_f[i][2]==2)):
+            if ((n_und_f[i][1]==1)and(n_und_f[i][2]==2)):
                class_f[i][k]=5 
            
      if ( sizeM == 2):
@@ -219,16 +219,16 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
          if (n_und_f[i][2]==2):
             class_f[i][k]=3 
          
-         if ((n_und_f[i][0]==1)&&(n_und_f[i][1]==1)):
+         if ((n_und_f[i][0]==1)and(n_und_f[i][1]==1)):
             class_f[i][k]=1 
          
-         if ((n_und_f[i][2]==1)&&(n_und_f[i][1]==1)):
+         if ((n_und_f[i][2]==1)and(n_und_f[i][1]==1)):
             class_f[i][k]=3 
          
          if (n_und_f[i][1]==2):
             class_f[i][k]=2 
          
-         if ((n_und_f[i][2]==1)&&(n_und_f[i][0]==1)):
+         if ((n_und_f[i][2]==1)and(n_und_f[i][0]==1)):
             class_f[i][k]=2 
         
    else:
@@ -259,7 +259,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
    for i in range(numberVar):
      for k in range(length_data):
         #    printf("%g\n",fabs(f[k][i]-f[k-1][i])) 
-       if ((math.fabs(f[k][i]-f[k-1][i]) < ep)&&(math.fabs(f[k][i]-f[k-1][i])>0)):
+       if ((math.fabs(f[k][i]-f[k-1][i]) < ep)and(math.fabs(f[k][i]-f[k-1][i])>0)):
           ep = math.fabs(f[k][i]-f[k-1][i]) 
        #   printf("%g\t%g\t%g\n",ep,f[k][i],f[k-1][i]) 
        
@@ -430,7 +430,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
        if (sum_F <= - size_f + 1 ):
          *bin_to_int  = 1
          
-       else if ((sum_F > - size_f + 1 )&&(sum_F < size_f - 1)):
+       else if ((sum_F > - size_f + 1 )and(sum_F < size_f - 1)):
          *bin_to_int  = size_f + i  
 
        else if (sum_F >= size_f - 1 ):
@@ -486,7 +486,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
   # printf("%g\t%g\t%g\n",funct[0],funct[1],funct[2]) 
 # Assign the flag *i_opt=1 if the binary sequence satisfies the given conditions
 #  if *i_opt==1 then the sequence is selected , otherwise it is rejected */
-   if ((funct[0] < opt_threshold)&&(funct[1] < opt_threshold)&&(funct[2] < opt_threshold)):
+   if ((funct[0] < opt_threshold)and(funct[1] < opt_threshold)and(funct[2] < opt_threshold)):
      *i_opt = 1 
 
   
@@ -552,7 +552,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
    for i in [columns_matr:0:-1]:
      for j in [1 + math.pow(2,k):rows_matr + 1:math.pow(2,k+1)]:
        for l in range(math.pow(2,k)):
-            if ((k_row == j + l - 1)&&(k_col == i - 1)):
+            if ((k_row == j + l - 1)and(k_col == i - 1)):
               *bn = 1 
             
             else:
@@ -704,7 +704,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
 
  # Probability estimated for matrix entries with prediction distance (or difference between current month and predicted month)
  # not exceeding T - 2
-  else if ((inter_length >= 1)&&(inter_length <= cols_matrix_T - 2 )):
+  else if ((inter_length >= 1)and(inter_length <= cols_matrix_T - 2 )):
 
     for i in range(cols_matrix_T  + 1 - inter_length):
       s_2[i] = seq[count_seq][i + ind_2 - cols_matrix_T - 1] 
