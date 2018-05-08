@@ -1,28 +1,31 @@
-'''' ***********************************************************************************************************************************
+''' ***********************************************************************************************************************************
 *
 * This code implements the training step of recession algorithm using recession data from the past with known period of recession.
 *
 * Last modified by E. Shchekinova 2017
 "
-/* Definition of fixed global parameters *********************************************************************************************''''
-
- sizeM = 3 # length of fixed running window used for selecting from the time series, two options could be selected  sizeM = {2 , 3} */
- numberVar = 2 # number of time series used for training, minimum permitted is  numberVar = 1 and maximum permitted  numberVar =3 */
- max_int = 10 # maximal size of preselected sequences in optimization*/
- maxLen = 400    # string length */
+/* Definition of fixed global parameters *********************************************************************************************'''
+  import math
+  import sys
+  import random
+ 
+  sizeM = 3 # length of fixed running window used for selecting from the time series, two options could be selected  sizeM = {2 , 3} */
+  numberVar = 2 # number of time series used for training, minimum permitted is  numberVar = 1 and maximum permitted  numberVar =3 */
+  max_int = 10 # maximal size of preselected sequences in optimization*/
+  maxLen = 400    # string length */
   flag_classes = 1 # if  flag_classes = 1 instead of full table of binary codes the grouping into classes is used */
- trans_total = 0 '''' 0 is used when probability of transition is calculated for every recession separately,
-                         1  is used when probability of transition is defined from the total time series ''''
+  trans_total = 0 ''' 0 is used when probability of transition is calculated for every recession separately,
+                         1  is used when probability of transition is defined from the total time series '''
 
- q = [0.0, 0.3, 0.5, 1.0] # q is the parameter that defines probability of "+" to occur in a binary sequence of size T*/
- size_q = q.size()
- t = [4, 6, 8]  # T is a prediction base*/
- size_T =t.size() 
- eps = [1.0,10.0,100.0,200.0] # eps is a threshold of relative change */
- size_eps = eps.size() 
- decay_kernel=[5,10]  # decay_kernel used for weighting functions*/
- size_dk = decay_kernel.size()
- float prob_total = [
+  q = [0.0, 0.3, 0.5, 1.0] # q is the parameter that defines probability of "+" to occur in a binary sequence of size T*/
+  size_q = q.size()
+  t = [4, 6, 8]  # T is a prediction base*/
+  size_T =t.size() 
+  eps = [1.0,10.0,100.0,200.0] # eps is a threshold of relative change */
+  size_eps = eps.size() 
+  decay_kernel=[5,10]  # decay_kernel used for weighting functions*/
+  size_dk = decay_kernel.size()
+  prob_total = [
                        [0.9540, 0.0, 0.0, 0.0, 0.8636, 0.0, 0.0, 0.0],
                        [0.0460, 0.0, 0.0, 0.0, 0.1364, 0.0, 0.0, 0.0],
                        [0.0,    0.0, 0.0, 0.0, 0.0,    0.0, 0.0, 0.0],
@@ -31,13 +34,12 @@
                        [0.0,    0.0, 0.5, 0.0, 0.0,    0.0, 0.12, 0.0],
                        [0.0,    0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 0.4651],
                        [0.0,    0.0, 0.0, 0.8, 0.0, 0.0, 0.0, 0.5349]
-                        ]  '''' probability transition matrix estimated
+                        ]  ''' probability transition matrix estimated
                                                                the total time series of recession,
-                                                               it is used when TRANS_TOTAL=1 ''''
- amb = [2, 4]  # amb is a prediction ambition parameter*/
- size_amb = amb.size() # size_amb is a size of array of ambition parameter*/
-
- ''''  length_recession - is known length of recession in the past used for optimization (given in months) 
+                                                               it is used when TRANS_TOTAL=1 '''
+  amb = [2, 4]  # amb is a prediction ambition parameter*/
+  size_amb = amb.size() # size_amb is a size of array of ambition parameter*/
+'''  length_recession - is known length of recession in the past used for optimization (given in months) 
  *   length_pre_recession - is the length of pre-recession period 
  *   length_post_recession - is the length of post-recession period 
  *   mid_point - is the start of pre-recession 
@@ -50,8 +52,8 @@
  *    start_predicted_period - end of the prediction period  
  *
  *
- ''''
- def calculateSTD(length_data, data[length_data][ numberVar], stdD[ numberVar]):
+ '''
+  def calculateSTD(length_data, data[length_data][ numberVar], stdD[ numberVar]):
 
     for j in range(numberVar):
        sum = 0.0 
@@ -62,20 +64,17 @@
     mean = sum/length_data 
 
     for i in range(length_data):
-        standardDeviation += pow(data[i][j] - mean, 2) 
-    stdD[j] = sqrt(standardDeviation/(length_data-1))
+        standardDeviation = standardDeviation+ math.pow(data[i][j] - mean, 2) 
+        stdD[j] = math.sqrt(standardDeviation/(length_data-1))
     
- def myRandom(size_n): 
+  def myRandom(size_n): 
 # Function returns an array of integer random numbers within range [1 size_n]
   numNums = 0
  
     # Initialize with a specific size.
 
     if (size_n >= 0): 
-        if (numArr != NULL):
-            free (numArr) 
-        if ((numArr = malloc (sizeof(int) * size_n)) == NULL):
-            return ERR_NO_MEM 
+       
         for i in range(size_n):
          numArr[i] = i
          numNums = size_n
@@ -86,17 +85,17 @@
     '''' Get random number from pool and remove it (rnd in this
        case returns a number between 0 and numNums-1 inclusive).''''
 
-    n = rand() % numNums 
+    n = random.random() % numNums 
     i = numArr[n] 
     numArr[n] = numArr[numNums-1] 
-    numNums-- 
+    numNums = numNums - 1 
     if (numNums == 0): 
         numArr = 0
 
- return i
+  return i
 
- def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM][ sizeM][ numberVar], thres_var, class_f[length_data -  sizeM][ numberVar], *var_th):
-'''' This function is used to replace an original time series with the sequence of ("1", "-1", "0") according to defined rules
+def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM][ sizeM][ numberVar], thres_var, class_f[length_data -  sizeM][ numberVar], *var_th):
+''' This function is used to replace an original time series with the sequence of ("1", "-1", "0") according to defined rules
 *  and given step-to-step variation threshold and finally with a class number assigned to every fixed time window  sizeM from a sequence
 *
 *  thres_var - variation threshold
@@ -104,12 +103,11 @@
 *  length_data - is the length of time series,  numberVar is the number of variables used in the analysis (default  numberVar = 2)
 *  coarse_f[n- sizeM][ sizeM][ numberVar] - is resulting sequence of ("1", "-1", "0")
 *  class_f[length_data -  sizeM][ numberVar] - array of class numbers
-''''
+'''
    name_file_cgn = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/cgn.dat" 
  # open file for writing binary table F */
 
-   FILE *file_cgn 
-   file_cgn = fopen(name_file_cgn,"w") 
+   file_cgn = open(name_file_cgn,"w") 
 
    for i in range(numberVar):
      max_f[i] = 0.0 
@@ -126,42 +124,42 @@
      for k in range(length_data):
        if (max_f[i]>0): 
           norm_f[k][i] = f[k][i]/max_f[i] 
-''''         if (stdD[i]>0):
-          norm_f[k][i] = f[k][i]/stdD[i] ''''
+   '''         if (stdD[i]>0):
+          norm_f[k][i] = f[k][i]/stdD[i] '''
         
      MinVarFunc(length_data, norm_f, &thres) 
 
    # coarse graining of time series
-   for i in range(length_data -  sizeM):
+     for i in range(length_data - sizeM):
      for j in range( sizeM):
        for k in range(numberVar):
         if (norm_f[j+i][k] == 0):
           coarse_f[i][j][k]=0 
           n_f[j+i+1][k]=norm_f[j+i][k] 
         else:
-    if ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) > thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]>0)):
+     if ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) > thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]>0)):
           #  printf("%g\t%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres,thres) 
            coarse_f[i][j][k] = 1 
            n_f[j+i+1][k]=norm_f[j+i][k] 
-        else if: ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) >  thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]<0)):
+     else if: ((fabs(norm_f[j+i+1][k]-norm_f[j+i][k]) >  thres*thres_var)&&(norm_f[j+i+1][k]-norm_f[j+i][k]<0)):
         # printf("%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres) 
            coarse_f[i][j][k] = -1 
             n_f[j+i+1][k]=norm_f[j+i][k] 
-         else:
-        //        printf("%g\t%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres,thres) 
+     else:
+        #        printf("%g\t%g\t%g\n",norm_f[j+i+1][k]-norm_f[j+i][k],thres_var*thres,thres) 
            coarse_f[i][j][k] = 0 
             n_f[j+i+1][k]=norm_f[j+i][k] 
       
-   *var_th=thres*thres_var 
-   for k in range(numberVar):
-   for i in range(length_data-1):
-      fprintf(file_cgn,"%g\t",norm_f[i][k]) 
+     *var_th=thres*thres_var 
+     for k in range(numberVar):
+     for i in range(length_data-1):
+       file_cgn.write(norm_f[i][k]+'\t') 
 
-    fprintf(file_cgn,"%g\n",norm_f[length_data-1][k]) 
-   file_cgn.close() 
+     file_cgn.write("%g\n",norm_f[length_data-1][k]) 
+     file_cgn.close() 
 
 
-   if ( flag_classes == 1):
+     if ( flag_classes == 1):
      for k in range( numberVar):
         for i in range(length_data -  sizeM):
            n_u = 0 
@@ -177,12 +175,12 @@
               if (coarse_f[i][j][k]==-1):
                 n_d = n_d + 1 
               
-            n_und_f[i][0] = n_u 
-            n_und_f[i][1] = n_n 
-            n_und_f[i][2] = n_d 
+              n_und_f[i][0] = n_u 
+              n_und_f[i][1] = n_n 
+              n_und_f[i][2] = n_d 
       
-      if (sizeM == 3):
-         for i in range(length_data -  sizeM):
+        if (sizeM == 3):
+          for i in range(length_data -  sizeM):
             if (n_und_f[i][0]==3):
                class_f[i][k]=1 
             
@@ -239,7 +237,7 @@
          class_f[i][k] = 0 
        
  def MinVarFunc(length_data, f[length_data][ numberVar], *thres):
-'''' This function is used to replace an original time series with the sequence of ("1", "-1", "0") according to defined rules
+'''This function is used to replace an original time series with the sequence of ("1", "-1", "0") according to defined rules
    and given step-to-step variation threshold and finally with a class number assigned to every fixed time window  sizeM from a sequence
 
   thres_var - variation threshold
@@ -247,7 +245,7 @@
   length_data - is the length of time series,  numberVar is the number of variables used in the analysis (default  numberVar = 2)
   coarse_f[n- sizeM][ sizeM][ numberVar] - is resulting sequence of ("1", "-1", "0")
   class_f[length_data -  sizeM][ numberVar] - array of class numbers
-''''
+'''
 
    # ep array measures number of positive "1", negative "-1" and no change "0" between
     neighbouring data points in time series 
@@ -255,25 +253,24 @@
    # finding maximum of time series
    ep = 0.0 
    for k in range(length_data):
-       if (fabs(f[k][0]-f[k-1][0]) > ep):
-          ep = fabs(f[k][0]-f[k-1][0]) 
+       if (math.fabs(f[k][0]-f[k-1][0]) > ep):
+          ep = math.fabs(f[k][0]-f[k-1][0]) 
        
    for i in range(numberVar):
      for k in range(length_data):
         #    printf("%g\n",fabs(f[k][i]-f[k-1][i])) 
-       if ((fabs(f[k][i]-f[k-1][i]) < ep)&&(fabs(f[k][i]-f[k-1][i])>0)):
-          ep = fabs(f[k][i]-f[k-1][i]) 
+       if ((math.fabs(f[k][i]-f[k-1][i]) < ep)&&(math.fabs(f[k][i]-f[k-1][i])>0)):
+          ep = math.fabs(f[k][i]-f[k-1][i]) 
        #   printf("%g\t%g\t%g\n",ep,f[k][i],f[k-1][i]) 
        
    *thres=ep 
 
  def MatrixTransition(rows_m, columns_m, size_a, size_b, indx, **a, prob_trans[rows_m][columns_m]):
-'''' This function is used to calculate the transition probabilities prob_trans[rows_m][columns_m]
+'''This function is used to calculate the transition probabilities prob_trans[rows_m][columns_m]
 *  of a binary time sequence a[size_a][size_b] where rows_m = 2^ sizeM, columns_m = 2^ sizeM and
 *   sizeM is a global constant defined as a fixed time window of the time sequence
 *  columns of prob_trans matrix are normalized
-''''
-
+'''
     for i in range(rows_m):
       for j in range(columns_m):
         prob_tr[i][j] = 0 
@@ -309,54 +306,44 @@
                           length_data, t[ sizeBinF], f[length_data- sizeM][ sizeM][ numberVar], class_f[length_data- sizeM][ numberVar], total_r, \
                           total_c, *count_ind, **binary_code_f, **opt_seq_eps, **opt_seq_ker, \
                           **opt_seq_num, **w_seq):
-'''' This function performs binary coding of data sequence class_f (if classes option is chosen) or sequence f (if no classes                                                                                                               option
+''' This function performs binary coding of data sequence class_f (if classes option is chosen) or sequence f (if no classes                                                                                                               option
 *  is selected) and implements pre-selection of binary codes according to defined weighting function WeightedSumOpt
 *  The results of pre-selection procedure are saved in the array w_seq[ sizeBinF * rows_g][length_data -  sizeM]
 *  as well as parameters opt_seq_eps[ sizeBinF * rows_g][0] , opt_seq_ker[ sizeBinF * rows_g][0] and
 *  opt_seq_num[ sizeBinF * rows_g][0] corresponding to the threshold of variation, decay kernel and number of binary sequence correspondingly
 *  The selection is done out of number of  sizeBinF*rows_f of possible binary coding rules
-''''
-
-   columns_f =  pow(3, sizeM) 
-   rows_f = pow(2,columns_f) 
-   columns_g = pow(2, numberVar) 
-   rows_g = pow(2,columns_g) 
+'''
+   columns_f =  math.pow(3, sizeM) 
+   rows_f = math.pow(2,columns_f) 
+   columns_g = math.pow(2, numberVar) 
+   rows_g = math.pow(2,columns_g) 
   
    opt_threshold = 1.0 
    *count_ind=0 
 
    value_dc = 20.0 
 
-   char name_file_completebin[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/completebin6.dat" 
-   char name_file_cbin[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/completebin.dat" 
+   char name_file_completebin = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/completebin6.dat" 
+   char name_file_cbin = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/completebin.dat" 
  # open file for writing binary table F 
 
-   FILE *file_completebin,*file_cbin 
-   file_completebin = fopen(name_file_completebin,"w") 
-   file_cbin = fopen(name_file_cbin,"w") 
+  
+   file_completebin = open(name_file_completebin,"w") 
+   file_cbin = open(name_file_cbin,"w") 
 
 
-   for i in range(rows_g):
-        binary_code_g[i]=(int *)malloc(columns_g*sizeof(int)) 
-        binary_code_g_inv[i]=(int *)malloc(columns_g*sizeof(int)) 
 
    BinaryMatrix(rows_g, columns_g, binary_code_g, binary_code_g_inv) 
 
    number_classes = 2 *  sizeM - 1 
-   power_f = pow(2,number_classes) 
+   power_f = math.pow(2,number_classes) 
 
-   int *bn_ sizeM[power_f],*bn_inv[power_f] 
-
-   for i in range(power_f):
-        bn_ sizeM[i]=(int *)malloc(number_classes*sizeof(int)) 
-        bn_inv[i]=(int *)malloc(number_classes*sizeof(int)) 
    
    BinaryMatrix(power_f, number_classes, bn_ sizeM, bn_inv) 
 
      count_i = 0 
      total_G_F =  sizeBinF * rows_g 
-     total_size = pow(2, pow(3,  sizeM )) 
-     float funct[3] 
+     total_size = math.pow(2, math.pow(3,  sizeM )) 
 
 
      for jj in range(rows_g):
@@ -388,17 +375,17 @@
                   f_inv = class_f[j][l] 
 
                   combined_data_t[l] = bn_ sizeM[i][f_inv-1] 
-                  fprintf(file_completebin,"%d\t",combined_data_t[l]) 
+                  file_completebin.write(combined_data_t[l]) 
 
 
                BinaryInverse( numberVar,combined_data_t, &f_inv) 
 
                seq[j] = binary_code_g[jj][f_inv-1] 
-               fprintf(file_cbin,"%d\t",seq[j]) 
+               file_cbin.write(seq[j]) 
 
             
-              fprintf(file_cbin,"%d\t%d\t%d\n",i +  sizeBinF*jj,i,jj) 
-              fprintf(file_completebin,"%d\t%d\t%d\n",i +  sizeBinF*jj,i,jj) 
+              file_cbin.write(i +  sizeBinF*jj,i,jj + '\n') 
+              file_completebin.write(i +  sizeBinF*jj,i,jj+ '\n') 
             
 
                 if (*count_ind < total_G_F):
@@ -416,24 +403,22 @@
   file_cbin.close() 
 
  def BinaryInverse(size_f, f[size_f], *bin_to_int):
- '''' This function returns the row of a binary matrix
+ ''' This function returns the row of a binary matrix
  * f[size_of(f)] by comparing it to the row of matrix F_bin[2^size_of(f)][size_of(f)]
  * bin_to_int is a number of row
- ''''
- 
+ ''' 
    *bin_to_int = 0 
    for count_ind in range(size_f):
-     *bin_to_int=f[size_f-1-count_ind]*pow(2,count_ind)+*bin_to_int 
+     *bin_to_int=f[size_f-1-count_ind]*math.pow(2,count_ind)+*bin_to_int 
    
    *bin_to_int = *bin_to_int + 1 
  
  def FunctionF( size_f, f[size_f], *bin_to_int):
- '''' This function returns the column of a binary matrix by comparing it to a given binary sequence
+ ''' This function returns the column of a binary matrix by comparing it to a given binary sequence
   f[size_of(f)] is a binary sequence that is compared to the column of matrix
  * F_bin[2^size_of(f)][size_of(f)]
  * bin_to_int is a number of row
- ''''
- 
+ '''
    sum_F = 0 
    for i in range(size_f):
     sum_F = f[i] + sum_F 
@@ -451,14 +436,13 @@
        else if (sum_F >= size_f - 1 ):
          *bin_to_int  = 2*(size_f - 1) + 1 
        
-     i = i +  1 
+     i ++ 
  
  def WeightedSumOpt( fi, funct[3], length_data, opt_threshold, decay_mk, res[length_data -  sizeM], *i_opt):
-'''' This function preselect the binary coding rules according to weighting function defined over the intervals of
+''' This function preselect the binary coding rules according to weighting function defined over the intervals of
 * known recession periods
 * The function returns *i_opt=1 if the input binary sequence res[length_data -  sizeM] satisfied the condition
-''''
-
+'''
    *i_opt = 0 
    a = (length_recession + 1)/2 
    b = (length_recession + 1)/2 + length_pre_recession 
@@ -481,7 +465,7 @@
      rules[count_local] = res[mid_point + count_local - 1] 
    
    for count_local in range(length_1 + 1): 
-     w = exp((a - abs(count_local - b))/decay_mk) 
+     w = exp((a - math.fabs(count_local - b))/decay_mk) 
 
      sum_1 = sum_1 + (1 - rules[count_local -1]) * (1 - w) 
 
@@ -491,14 +475,14 @@
      sum_2 = sum_2 + (1 - rules[count_local - 1]) 
    
    for count_local in range(length_2 +1,total_length + 1):
-     w = exp((a - abs(count_local - b))/decay_mk) 
+     w = math.fexp((a - math.fabs(count_local - b))/decay_mk) 
      sum_3 = sum_3 + (1 - rules[count_local - 1])*(1 - w) 
 
      denom_sum_3 = denom_sum_3 + (1 - w) 
    
-   funct[0] = pow(sum_1/denom_sum_1,2) 
-   funct[1] = pow(1-sum_2/length_recession,2) 
-   funct[2] = pow(sum_3/denom_sum_3,2) 
+   funct[0] = math.pow(sum_1/denom_sum_1,2) 
+   funct[1] = math.pow(1-sum_2/length_recession,2) 
+   funct[2] = math.pow(sum_3/denom_sum_3,2) 
   # printf("%g\t%g\t%g\n",funct[0],funct[1],funct[2]) 
 # Assign the flag *i_opt=1 if the binary sequence satisfies the given conditions
 #  if *i_opt==1 then the sequence is selected , otherwise it is rejected */
@@ -507,7 +491,7 @@
 
   
  def BinaryMatrix( rows_matr, columns_matr, **bn, **gn):
- ''''  Here a two-dimensional binary matrix bn[rows_matr][columns_matr] is initialized
+ '''Here a two-dimensional binary matrix bn[rows_matr][columns_matr] is initialized
  *  with rows_matr = 2^columns_matr
  * Example of a binary matrix of size 3 x 2^3
  *     0 0 0
@@ -518,8 +502,7 @@
  *     1 0 1
  *     1 1 0
  *     1 1 1
- ''''
- 
+ '''
    k = 0
    for i in range(rows_matr):
      for j in range(columns_matr):
@@ -538,11 +521,11 @@
                     gn[rows_matr-1-i][j]=bn[i][j] 
     
  def BinaryMatrixR(rows_matr, columns_matr, t[ sizeBinF], **bn):
- ''''  Here a two-dimensional binary matrix bn[ sizeBinF][columns_matr] is initialized
+ '''  Here a two-dimensional binary matrix bn[ sizeBinF][columns_matr] is initialized
  *  with  sizeBinF <= 2^columns_matr
  * The matrix bn is constructed with rows from a full size binary matrix by selecting
  *  sizeBinF rows according to the sequence of numbers in t[ sizeBinF]
- ''''
+ '''
    k = 0, i, j, l = 0, ii = 0, k1 = 0 
 
      for j in range(columns_matr):
@@ -561,15 +544,14 @@
      k = k + 1 
    
  def BinaryMatrixF(rows_matr, columns_matr, k_row, k_col, *bn):
- ''''  Here a two-dimensional binary matrix bn[rows_matr][columns_matr] is initialized
+ '''  Here a two-dimensional binary matrix bn[rows_matr][columns_matr] is initialized
  *  with rows_matr = 2^columns_matr
- ''''
- 
+ '''
    k = 0
 
    for i in [columns_matr:0:-1]:
-     for j in [1 + pow(2,k):rows_matr + 1:pow(2,k+1)]:
-       for l in range(pow(2,k)):
+     for j in [1 + math.pow(2,k):rows_matr + 1:math.pow(2,k+1)]:
+       for l in range(math.pow(2,k)):
             if ((k_row == j + l - 1)&&(k_col == i - 1)):
               *bn = 1 
             
@@ -590,11 +572,9 @@
 
  def AssignTransProbabilities(rows, cols, row_trans, **b, **matr_T, **trans_matr_T, \
                       prob[row_trans][row_trans]):
-'''' This function makes use of probability of transitions matrix prob[row_trans][row_trans] and fills the
+''' This function makes use of probability of transitions matrix prob[row_trans][row_trans] and fills the
 * matrix of transition probabilities trans_matr_T[rows][cols]
-''''
-
-
+'''
    for ind_2 in range(rows):
    for ind_1 in range(cols):
        for i in range(sizeM):
@@ -608,19 +588,18 @@
  def SummedProbability(nums, row_trans, q_0, pred_amb, time_length, p_threshold, count_seq, length_seq, **seq, \
                        prob_matr[row_trans][row_trans], **trans_matr_T, **b_matrix, **matr_T, w_flag, *f_j, *fnopostrec_j,\
                         *fnopost_j):
-'''' Integrate probabilities over intervals corresponding to recession, pre-recession and post-recession
+''' Integrate probabilities over intervals corresponding to recession, pre-recession and post-recession
 * using given binary sequence seq[][]
 * The integral value or summed probabilities are written into output *f_j
-''''
-
-   rows_T = pow(2,time_length) 
+'''
+   rows_T = math.pow(2,time_length) 
    
    test = 0 
   
    for i in range(rows_T):
      r = 1 
      for j in range(time_length):
-       r = r*pow(1-q_0,matr_T[i][j]) 
+       r = r*math.pow(1-q_0,matr_T[i][j]) 
    #      r = r*pow(1-q_0*pow(p_threshold,time_length-j),matr_T[i][j]) 
      
      p_T[i]=r 
@@ -662,12 +641,11 @@
 
  def ProductTransProbability(test, row_trans, ind_1, ind_2, cols_matrix_T, rows_matrix_T, count_seq, \
                               length_seq, **seq, prob_matr[row_trans][row_trans], **matr_T, *p_T, **trans_matr_T, **b_mat, *product_prob):
-'''' The function estimates the entries of probability of recession *product_prob based on distance ind_2-ind_1
+''' The function estimates the entries of probability of recession *product_prob based on distance ind_2-ind_1
  *  between current month ind_1 and predicted month ind_2  the probability is evaluated based on matrix prob_matr and input
  * binary sequence seq[ sizeBinF*rows_g][length_data-  sizeM], here count_seq <  sizeBinF*rows_g is a number of binary sequence
  * selected out of total  sizeBinF*rows_g sequences
- ''''
- 
+ ''' 
   inter_length = ind_2 - ind_1 
 
 
@@ -681,7 +659,7 @@
       s_1[count] = seq[count_seq][ind_1 -  sizeM + count] 
     
     BinaryInverse( sizeM, s_1, &r) 
-    r=pow(2, sizeM)-r+1 
+    r=math.pow(2, sizeM)-r+1 
 
     for count in range(row_trans):
       pr[count] = 0 
@@ -754,18 +732,12 @@
  
  def OptimalParameters(*opt_thres, *opt_q, *opt_J, *opt_p, *opt_ind, length_amb, length_data, time_length, row_trans, count_seq, q[size_q], opt_seq[length_data -  sizeM], **seq, \
                          **opt_seq_eps, **opt_seq_ker, **opt_seq_num, **b_matrix, prob_tr[row_trans][row_trans], w_false):
-'''' This function is used to run optimization procedure and to estimate the optimal parameters *opt_thres, *opt_q, *opt_p, *opt_ind
+''' This function is used to run optimization procedure and to estimate the optimal parameters *opt_thres, *opt_q, *opt_p, *opt_ind
 * as well as value of subjective function *opt_J from a given sequence seq[ sizeBinF*rows_g][length_data- sizeM]
 * The optimal binary sequence that fits the optimization criteria *opt_seq[length_data- sizeM] is found
-''''
-
+'''
    number_rows = pow(2,time_length) 
    number_cols = time_length -  sizeM 
-
-   for ind_p in range(number_rows):
-     transition_matrix[ind_p]=(float *)malloc((time_length -  sizeM)*sizeof(float)) 
-     matrix_T[ind_p]=(int *)malloc(time_length*sizeof(int)) 
-     binary_code_inv[ind_p]=(int *)malloc(time_length*sizeof(int)) 
 
 
    BinaryMatrix(number_rows, time_length, matrix_T, binary_code_inv) 
@@ -788,7 +760,7 @@
      AssignTransProbabilities(number_rows, number_cols, row_trans, b_matrix, \
                                    matrix_T, transition_matrix, prob_trans) 
 
-     float  q_0 = 0, p_threshold = 0 
+     q_0 = 0.0, p_threshold = 0.0 
      #   p_threshold = 0  # always no-recession is assumed
      #  p_threshold = 1  # always recession is assumed
 # **************Start of search for minimum of subjective function ******************* 
@@ -837,19 +809,18 @@
    *opt_J = J_0 
 
    opt_ker=opt_seq_ker[min_index][0] 
-   FILE *file_bin_seq 
-
-   char name_file_bin[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/binfile.dat" 
+  
+   char name_file_bin = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/binfile.dat" 
  # open file for writing binary table F */
 
-   file_bin_seq = fopen(name_file_bin,"w") 
+   file_bin_seq = open(name_file_bin,"w") 
    
    for k in range(length_data - sizeM-1):
     opt_seq[k] = seq[min_index][k] 
-    fprintf(file_bin_seq,"%d\t",opt_seq[k]) 
+    file_bin_seq.write(opt_seq[k]) 
    
    opt_seq[length_data -  sizeM-1] = seq[min_index][length_data -  sizeM-1] 
-    fprintf(file_bin_seq,"%d\t",opt_seq[length_data -  sizeM-1]) 
+    file_bin_seq.write(opt_seq[length_data -  sizeM-1]) 
     file_bin_seq.close() 
 #   End of optimization procedure, minimum of objective function *opt_J is found ******************* 
   for k in range(count_seq):
@@ -859,12 +830,11 @@
         prob_tr[i][j]=pr_tr[i][j][k] 
    
  def MinimumFromArray( rows_f, columns_f, f[rows_f][columns_f], *min_value, *min_index):
-'''' This function finds a minimum element in a given column of two--dimensional matrix and returns index of
+'''This function finds a minimum element in a given column of two--dimensional matrix and returns index of
   of the element and matrix value
   f[rows_f][columns_f] is matrix and its minimum value in the first column is *min_value
   *min_index is the index of the element
-''''
-
+'''
    *min_value = f[0][0] 
    *min_index = 0 
    for i in range(rows_f):
@@ -873,12 +843,11 @@
        *min_index = i 
  
  def MinimumF(size_f, f[size_f], *min_index):
-'''' This function finds a minimum element in a one--dimensional array and returns index of
+'''This function finds a minimum element in a one--dimensional array and returns index of
   of the element
   f[size_f] is matrix and its minimum value is f[*min_index]
   *min_index is the index of the element
-''''
-
+'''
   *min_index = 0 
   f_min=f[0] 
   for i in range(size_f):
@@ -887,12 +856,11 @@
       *min_index = i 
   
  def PowMatrix(n, matrix_in[n][n], matrix_out[n][n], d):
-'''' This function defines power of two-dimensional square matrix  and return the resulting two dimensional matrix
+'''This function defines power of two-dimensional square matrix  and return the resulting two dimensional matrix
   matrix_in[n][n] is input matrix of size n x n
 *  matrix matrix_out[n][n] is an output matrix ,
 *  d is the power
-''''
-
+'''
     for i in range(n):
       for j in range(n):
          temp_in[i][j] = matrix_in[i][j] 
@@ -914,23 +882,23 @@
 
  def DefineMatrixProbabilities(row_trans, time_length, q_0, p, count_s, length_seq, **seq_t, \
       prob_matr[row_trans][row_trans], **matr_T, **trans_matr_T, **b_mat, opt_p, **matrix_p:
-'''' This functions evaluates matrix of recession matrix_p[interval_current+2][interval_predicted+2]
+''' This functions evaluates matrix of recession matrix_p[interval_current+2][interval_predicted+2]
 * using initial given binary sequence seq_t[ sizeBinF*rows_g][length_seq]
-''''
+'''
    
-   rows_T = pow(2,time_length) 
+   rows_T = math.pow(2,time_length) 
    
    for i in range(rows_T):
      r = 1 
      for j in range(time_length):
-       r = r * pow(1-q_0*pow(p,time_length - j),matr_T[i][j]) 
+       r = r * math.pow(1-q_0*math.pow(p,time_length - j),matr_T[i][j]) 
      
      p_T[i] = r 
    
 
    for i in range(interval_current + 2):
       for j in range(interval_predicted + 2): 
-        matrix_p[i][j] = NAN 
+        matrix_p[i][j] =float('nan') 
     
    test =1  
    for i in range(interval_predicted + 1):
@@ -942,29 +910,19 @@
 
  
  def probability(rows, cols, prob[rows][cols], prob_total[rows][cols]):
- '''' This function assigns transition probability matrix from a given prob_total if option TRANS_TOTAL 1
+ ''' This function assigns transition probability matrix from a given prob_total if option TRANS_TOTAL 1
    is chosen (probability is evaluated using entire time series)
- ''''
+ '''
   for i in range(rows):
     for j in range(cols):
        prob[i][j]=prob_total[i][j] 
 
 # ***********  Open files for reading recession data and writing recession parameters ******************************************
 
-   clock_t start, end 
-   double cpu_time_used 
-
    start = clock() 
 
-   FILE *file_data_recession, *file_matrix_trans, *file_parameters_recession,\
-        *file_optimal_parameter, *file_bin_sequence 
 
-   int rec 
-   char c[2] 
-
-   char line[MAXLEN] 
-
-   row_trans = pow(2, sizeM) 
+   row_trans =math.pow(2, sizeM) 
 
    char c1[3] 
 
@@ -972,118 +930,83 @@
    sprintf(c1, "%s", argv[1]) 
 
 
-   char name_file_data[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/Rec6/DataRec" 
+   name_file_data = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/Rec6/DataRec" 
  # open file for reading recession data 
 
-   strncat(name_file_data, c1, 200) 
-   strncat(name_file_data,".dat", 200) 
-   printf("%s\n",name_file_data) 
+   
+   strncat(name_file_data =name_file_data + c1 + ".dat" 
 
 
-   file_data_recession = fopen(name_file_data,"r+") 
-   if (file_data_recession == NULL):
-     printf("Error opening file %s", name_file_data) 
-     exit(0) 
-
-     strcpy(c1, "") 
-     sprintf(c1, "%s", argv[1]) 
-     strcpy(c, "") 
-     sprintf(c, "%s", argv[2]) 
-     printf("%s\n",c) 
-     printf("%s\n",c1) 
+   file_data_recession = open(name_file_data,"r+") 
+   
 
 
-   char name_file_opt_parameter[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/optimal_parameters_" 
+   name_file_opt_parameter = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/optimal_parameters_" 
    # open file for writing an optimal parameters defined from optimization procedure 
 
-   strncat(name_file_opt_parameter,c, 200) 
-   strncat(name_file_opt_parameter, "_", 200) 
-   strncat(name_file_opt_parameter, c1, 200) 
-   strncat(name_file_opt_parameter,".dat", 200) 
-   printf("%s\n",name_file_opt_parameter) 
-    printf("%s\n",c1) 
+   name_file_opt_parameter = name_file_opt_parameter + c + "_" + cl + ".dat"
 
 
-
-   file_optimal_parameter = fopen(name_file_opt_parameter,"w") 
+   file_optimal_parameter = open(name_file_opt_parameter,"w") 
 
    f_step = 0 
    ch = 0 
    
-   fscanf(file_data_recession,"%s\n", st) 
-   printf("%s\n", st) 
-   printf("%s\n", st) 
-   fscanf(file_data_recession,"%4d\t%4d\t%4d\t%d\n", &length_pre_recession, &length_recession, &length_post_recession, &mid_point) 
+   file_data_recession.read(st) 
+   
+   file_data_recession.read(&length_pre_recession, &length_recession, &length_post_recession, &mid_point) 
    total_length = length_pre_recession + length_recession + length_post_recession 
    start_recession = mid_point + length_pre_recession 
 
-   while ((ch = fgetc(file_data_recession)) != EOF){
+   #while ((ch = fgetc(file_data_recession)) != EOF){
      count_col = 0 
      for count_col in range(numberVar-1)):
-       fscanf(file_data_recession,"%g\t", &data_1) 
+       file_data_recession.read( &data_1) 
        printf("%g\t", data_1) 
     
-       fscanf(file_data_recession,"%g\n", &data_1) 
-       printf("%g\n", data_1) 
-
+       file_data_recession.read(&data_1) 
+       
        f_step++
        
    length_data = f_step 
 
-   rewind(file_data_recession) 
-   fscanf(file_data_recession,"%s\n", st) 
-   printf("%s\n", st) 
+  # rewind(file_data_recession) 
+   file_data_recession.read(st) 
+  # printf("%s\n", st) 
 
    f_step = 0 
-   fscanf(file_data_recession,"%4d\t%4d\t%4d\t%4d\n", &length_pre_recession, &length_recession, &length_post_recession, &mid_point) 
+   file_data_recession.read(&length_pre_recession, &length_recession, &length_post_recession, &mid_point) 
    while f_step < length_data:
 
      count_col = 0 
      for count_col in range(numberVar):
-       fscanf(file_data_recession,"%g\t", &data_1) 
+      file_data_recession.read(&data_1) 
          data_recession[f_step][count_col] = -data_1
 
-     fscanf(file_data_recession,"%g\n", &data_1) 
+     file_data_recession.read(&data_1) 
      data_recession[f_step][ numberVar-1] = -data_1 
      f_step = f_step + 1 
 
 # *********************End of reading recession data ****************************************************************** 
 
-   total_rows = pow(2,pow(2, numberVar)) 
-   intotal_columns = pow(2,pow(3, sizeM)) 
+   total_rows = math.pow(2,math.pow(2, numberVar)) 
+   intotal_columns = math.pow(2,math.pow(3, sizeM)) 
 
-    sizeBinF = ( flag_classes == 1) ? pow(2,2* sizeM - 1) : MAX_INT  # if classes option is chosen   flag_classes ==1 the binary table F has number of rows 2^(2* sizeM-1)
+    sizeBinF = ( flag_classes == 1) ? math.pow(2,2* sizeM - 1) : MAX_INT  # if classes option is chosen   flag_classes ==1 the binary table F has number of rows 2^(2* sizeM-1)
                                                                        #   otherwise the number of columns equal to MAX_INT 
 
-   rows_g = pow(2,pow(2, numberVar)) 
+   rows_g = math.pow(2,math.pow(2, numberVar)) 
    total_size_f_g = rows_g *  sizeBinF 
    
    num_total_opt =  sizeBinF * size_eps * size_dk *rows_g 
 
-# **** Initialization of matrices containing optimal parameters values *******************************************
 
-
-   for i in range(num_total_opt):
-     opt_seq_eps[i]=(float *)malloc(1*sizeof(float))  # initialize rows of the matrix opt_seq_eps[][] 
-     opt_seq_ker[i]=(float *)malloc(1*sizeof(float))  # initialize rows of the matrix opt_seq_ker[][] 
-     opt_seq_num[i]=(int *)malloc(1*sizeof(int))  # initialize rows of the matrix bin_opt_seq[][] 
-     opt_w_seq[i] =(int *)malloc((length_data -  sizeM)*sizeof(int))  # initialize binary sequence 
-
-   for i in range(total_size_f_g):
-     seq_eps[i]=(float *)malloc(1*sizeof(float))  # initialize rows of the matrix opt_seq_eps[][]
-     seq_ker[i]=(float *)malloc(1*sizeof(float))  # initialize rows of the matrix opt_seq_ker[][]
-     seq_num[i]=(int *)malloc(1*sizeof(int))  # initialize rows of the matrix bin_opt_seq[][]
-
-   for i in range(total_size_f_g):
-     w_seq[i] =(int *)malloc((length_data -  sizeM)*sizeof(int))  # initialize binary sequence
-
-# **** End of Initialization *************************************************************************************
    num_seq = 0 
    count_opt = 0
    value_eps = 0.04 
 
-   columns_f =  pow(3, sizeM) 
-   rows_f = pow(2,columns_f) 
+   columns_f =  math.pow(3, sizeM) 
+   rows_f = math.pow(2,columns_f) 
 
    ind_select = 1 
    ind=0 
@@ -1091,19 +1014,17 @@
 
    count_seq = 0 
 
-   char name_file_F[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/matrix_F_" 
+   char name_file_F = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/matrix_F_" 
  # open file for writing binary table F 
 
-   strcat(name_file_F, c) 
-   strcat(name_file_F,".dat") 
+   strcat(name_file_F = name_file_F + c + ".dat" 
+  
+   file_matrix_trans = open(name_file_F,"w") 
 
-   file_matrix_trans = fopen(name_file_F,"w") 
-
-   char name_file_coarsegrain[] = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/coarsegrain.dat" 
+   char name_file_coarsegrain = "C:/Users/shchekin/Documents/ElenaDocuments/InclinationAnalysis/InclinationAlgorithmTotal/DataElisabeth/coarsegrain.dat" 
  # open file for writing binary table F */
 
-   FILE *file_coarsegrain 
-   file_coarsegrain = fopen(name_file_coarsegrain,"w") 
+   file_coarsegrain = open(name_file_coarsegrain,"w") 
 
    count_ind = 0 
    j = 0 
@@ -1116,9 +1037,9 @@
 
      for i in range(numberVar):
         for j1 in range(length_data- sizeM-1):
-           fprintf(file_coarsegrain,"%d\t",coarse_data[j1][0][i]) 
+          file_coarsegrain.write(coarse_data[j1][0][i]) 
     
-        fprintf(file_coarsegrain,"%d\t%g\n",coarse_data[length_data- sizeM-1][0][i],var_thres) 
+        file_coarsegrain.write(coarse_data[length_data- sizeM-1][0][i],var_thres) 
      
      epsil = var_thres 
  
@@ -1142,15 +1063,10 @@
    count_ind = j 
    file_coarsegrain.close() 
 # ******************  End of pre--selection of parameters and binary sequence that satisfy inner optimization criterion ***************   
-   
-     for i in range(row_trans):
-       b_matrix[i]=(int *)malloc( sizeM*sizeof(int)) 
-       g_matrix[i]=(int *)malloc( sizeM*sizeof(int)) 
-
 
      BinaryMatrix(row_trans,  sizeM, b_matrix, g_matrix)  # define a binary matrix with the number of columns  sizeM
 
-     fprintf(file_optimal_parameter,"%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "var_f", "eps_f","q_f", "J_f", "f_f", "p_f", "T" ,"L") 
+     file_optimal_parameter.write("var_f", "eps_f","q_f", "J_f", "f_f", "p_f", "T" ,"L") 
 
      count_ind = j 
  # ***** Start of optimization procedure during training stage *************************************************************************/
@@ -1160,7 +1076,7 @@
 
        for l in range(size_amb): # iterate over index representing length of prediction ambition 
 
-         int length_amb = amb[l] 
+         length_amb = amb[l] 
 
          OptimalParameters(&opt_thres, &opt_q, &opt_J, &opt_p, &opt_f, length_amb, length_data, time_length, row_trans, count_ind, q, opt_seq, opt_w_seq,\
                              opt_seq_eps, opt_seq_ker, opt_seq_num, b_matrix, prob_trans,1) 
@@ -1171,29 +1087,19 @@
          p_f[count][l]= opt_p 
          Jmin=J_f[0][0] 
 
-/* ***************** writing to output file and print of optimization parameters and objective function J_f ************************************** */
+# ***************** writing to output file and print of optimization parameters and objective function J_f ************************************** */
 
-         printf("%g\t%g\t%g\t%g\t%d\t%g\t%d\t%d\n", var_thres, thres_f[count][l],q_f[count][l], J_f[count][l], i_f[count][l], p_f[count][l], time_length, length_amb) 
-         fprintf(file_optimal_parameter,"%g\t%g\t%g\t%g\t%d\t%g\t%d\t%d\n", var_thres, thres_f[count][l],q_f[count][l], J_f[count][l], i_f[count][l], p_f[count][l], time_length, length_amb) 
+         file_optimal_parameter.write(var_thres, thres_f[count][l],q_f[count][l], J_f[count][l], i_f[count][l], p_f[count][l], time_length, length_amb) 
 
-/* ****** writing to output file and print of the binary sequence that was identified in optimization ********************************************** */
+# ****** writing to output file and print of the binary sequence that was identified in optimization ********************************************** */
 
-         fprintf(file_matrix_trans,"%g\n",J_f[count][l]) 
-         for (i=0  i<row_trans i++) {
-          for (j=0  j<row_trans-1 j++) {
-            printf("%g\t",prob_trans[i][j]) 
-           }
-           printf("%g\n",prob_trans[i][row_trans-1]) 
-        }
-     }
- }
-''''* **************** End of optimization procedure ********************************************************* */
+         file_matrix_trans.write(J_f[count][l]) 
+         
+'''* **************** End of optimization procedure ********************************************************* */
 ////
-///* ****************** Close data files ********************************************************************** ''''
+///* ****************** Close data files ********************************************************************** '''
      file_data_recession.close() 
      file_optimal_parameter.close() 
      file_matrix_trans.close() 
 
-
-     print("%g\n",cpu_time_used)  /* show total cpu time required for simulation run */
 
