@@ -391,7 +391,10 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
                 if (*count_ind < total_G_F):
                    opt_seq_eps[*count_ind][0] = epsil 
                    opt_seq_ker[*count_ind][0] = decay_ker 
-                   opt_seq_num[*count_ind][0] = ( flag_classes == 0) ? t[i] + total_size*jj : i +  sizeBinF*jj 
+                   if ( flag_classes == 0):
+                     opt_seq_num[*count_ind][0] = t[i] + total_size*jj
+                   else:
+                     opt_seq_num[*count_ind][0] =  i +  sizeBinF*jj 
                
                    for j in range(length_data -  sizeM):
                      w_seq[*count_ind][j]=seq[j] 
@@ -563,7 +566,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
  def Contains(arr[], n, x):
 # the function returns 1 if x is in array arr[n], otherwise 0
 #
-    while (n--):
+    while (n > maxN):
         if (arr[n] == x):
            return 1 
         n = n - 1
