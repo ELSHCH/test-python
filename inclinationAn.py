@@ -436,7 +436,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
        else if (sum_F >= size_f - 1 ):
          *bin_to_int  = 2*(size_f - 1) + 1 
        
-     i ++ 
+     i +=1 
  
  def WeightedSumOpt( fi, funct[3], length_data, opt_threshold, decay_mk, res[length_data -  sizeM], *i_opt):
 ''' This function preselect the binary coding rules according to weighting function defined over the intervals of
@@ -966,7 +966,7 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
     
        file_data_recession.read(&data_1) 
        
-       f_step++
+       f_step+=1
        
    length_data = f_step 
 
@@ -992,7 +992,10 @@ def GridNew(length_data, f[length_data][ numberVar], coarse_f[length_data- sizeM
    total_rows = math.pow(2,math.pow(2, numberVar)) 
    intotal_columns = math.pow(2,math.pow(3, sizeM)) 
 
-    sizeBinF = ( flag_classes == 1) ? math.pow(2,2* sizeM - 1) : MAX_INT  # if classes option is chosen   flag_classes ==1 the binary table F has number of rows 2^(2* sizeM-1)
+   if ( flag_classes == 1):
+     sizeBinF = math.pow(2,2* sizeM - 1)
+   else:
+     sizeBinF = MAX_INT  # if classes option is chosen   flag_classes ==1 the binary table F has number of rows 2^(2* sizeM-1)
                                                                        #   otherwise the number of columns equal to MAX_INT 
 
    rows_g = math.pow(2,math.pow(2, numberVar)) 
